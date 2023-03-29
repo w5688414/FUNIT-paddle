@@ -9,6 +9,7 @@ from custom_dataset import CustomDataset, CustomDataset_v1
 from networks import *
 from utils import *
 from glob import glob
+import os
 import cv2
 from visualdl import LogWriter
 from copy import deepcopy
@@ -286,17 +287,17 @@ class FUNIT(object) :
         params['ClsEn_'] = self.ClsEn_.state_dict()
         params['Dec_'] = self.Dec_.state_dict()
         params['Dis'] = self.Dis.state_dict()
-        paddle.save(params, os.path.join(dir, self.name + '_params_%07d.pt' % step))
+        paddle.save(params, os.path.join(dir, self.name + '_params_%07d.pdparams' % step))
 
     def load(self, dir, step):
         params = paddle.load(os.path.join(dir, self.name + '_params_%07d.pdparams' % step))
-        self.ConEn.load_state_dict(params['ConEn'])
-        self.ClsEn.load_state_dict(params['ClsEn'])
-        self.Dec.load_state_dict(params['Dec'])
-        self.ConEn_.load_state_dict(params['ConEn_'])
-        self.ClsEn_.load_state_dict(params['ClsEn_'])
-        self.Dec_.load_state_dict(params['Dec_'])
-        self.Dis.load_state_dict(params['Dis'])
+        self.ConEn.load_dict(params['ConEn'])
+        self.ClsEn.load_dict(params['ClsEn'])
+        self.Dec.load_dict(params['Dec'])
+        self.ConEn_.load_dict(params['ConEn_'])
+        self.ClsEn_.load_dict(params['ClsEn_'])
+        self.Dec_.load_dict(params['Dec_'])
+        self.Dis.load_dict(params['Dis'])
 
     def test(self):
         model_list = glob(os.path.join(self.result_dir, self.name, 'model', '*.pdparams'))
@@ -328,10 +329,10 @@ class FUNIT(object) :
             content, target = content[:self.batch_size], target
 
             con_A = self.ConEn_(content)
-            cls_code = paddle.zeros(0, self.batch_size, self.code_dim)
+            cls_code = paddle.zeros([0, self.batch_size, self.code_dim])
             for i in range(target.shape[1] // 3):
                 cls = self.ClsEn_(target[:, 3 * i:3 * (i + 1)])
-                cls_code = paddle.cat((cls_code, cls.unsqueeze(0)), 0)
+                cls_code = paddle.concat((cls_code, cls.unsqueeze(0)), 0)
 
             cls_code = paddle.mean(cls_code, 0)
             result = self.Dec_(con_A, cls_code)
